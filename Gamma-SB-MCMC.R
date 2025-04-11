@@ -25,6 +25,7 @@ miller <- function(x, mu, a0, b0, ep, M){
 
 
 
+
 ###    Scaled Beta (SB) prior    ###
 ## model settings 
 # y \sim Ga(A_y, B_y/lambda)
@@ -44,33 +45,33 @@ miller <- function(x, mu, a0, b0, ep, M){
 ## OUTPUT
 # posterior samples of parameters 
 
-SB_prior <- function(y1, A_y, B_y, a_ta, b_ta, a_be, b_be, a, b, de=10^(-8), ep=10^(-8), M=10, mc, burn){
+SB_prior <- function(y, A_y, B_y, a_ta, b_ta, a_be, b_be, a, b, de=10^(-8), ep=10^(-8), M=10, mc, burn){
   # preparation
-  n <- length(y1)
+  m <- length(y)
   # initial values
-  la <- A_y / (B_y * y1)
-  rho. <- rep(1, n)
-  nu <- rep(1, n)
+  la <- A_y / (B_y * y)
+  rho. <- rep(1, m)
+  nu <- rep(1, m)
   ta <- 1
   be <- 1
   
   # objects to store posterior samples
-  La <- matrix(NA, mc, n)
-  Rho. <- matrix(NA, mc, n)
-  Nu <- matrix(NA, mc, n)
+  La <- matrix(NA, mc, m)
+  Rho. <- matrix(NA, mc, m)
+  Nu <- matrix(NA, mc, m)
   Ta <- rep(NA, mc)
   Be <- rep(NA, mc)
   
   # MCMC
   for(iota in 1:mc){
     # la
-    la <- rgamma(n, shape = A_y + 1 + nu, rate = B_y * y1 + be * nu)
+    la <- rgamma(m, shape = A_y + 1 + nu, rate = B_y * y + be * nu)
     La[iota, ] <- la
     
     # rho
-    rho._proposal <- sapply(2 * (1 + nu / ta) + 2 * de, function(twicerate) rgig(1, lambda = a * D + b, chi = 2 * de, psi = twicerate))
-    uniform <- runif(n, min = 0, max = 1)
-    logratio <- dgamma(rho._proposal, shape = a * D + b, rate = 1 + nu / ta, log = TRUE) - dgamma(rho., shape = a * D + b, rate = 1 + nu / ta, log = TRUE) - ((a + b - 1) * log(rho._proposal) - ((2 * (1 + nu / ta) + 2 * de) * rho._proposal + (2 * de) / rho._proposal) / 2 - (a + b - 1) * log(rho.) + ((2 * (1 + nu / ta) + 2 * de) * rho. + (2 * de) / rho.) / 2)
+    rho._proposal <- sapply(2 * (1 + nu / ta) + 2 * de, function(twicerate) rgig(1, lambda = a + b, chi = 2 * de, psi = twicerate))
+    uniform <- runif(m, min = 0, max = 1)
+    logratio <- dgamma(rho._proposal, shape = a + b, rate = 1 + nu / ta, log = TRUE) - dgamma(rho., shape = a + b, rate = 1 + nu / ta, log = TRUE) - ((a + b - 1) * log(rho._proposal) - ((2 * (1 + nu / ta) + 2 * de) * rho._proposal + (2 * de) / rho._proposal) / 2 - (a + b - 1) * log(rho.) + ((2 * (1 + nu / ta) + 2 * de) * rho. + (2 * de) / rho.) / 2)
     rho. <- ifelse(test = (log(uniform) <= logratio), yes = rho._proposal, no = rho.)
     Rho.[iota, ] <- rho.
     
@@ -79,22 +80,22 @@ SB_prior <- function(y1, A_y, B_y, a_ta, b_ta, a_be, b_be, a, b, de=10^(-8), ep=
     Be[iota] <- be
     
     # ta
-    ta <- rgig(1, lambda = a_ta - n * a, chi = 2 * sum(rho. * nu), psi = 2 * b_ta)
+    ta <- rgig(1, lambda = a_ta - m * a, chi = 2 * sum(rho. * nu), psi = 2 * b_ta)
     Ta[iota] <- ta
     
     # nu
     ABJ <- apply(rbind(la, a, rho. / ta), 2, function(s) miller(x = s[1], mu = 1 / be, a0 = s[2], b0 = s[3], ep = ep, M = M))
     A <- ABJ[1, ]
     B <- ABJ[2, ]
-    nu_proposal <- rgamma(n, shape = A, rate = B)
-    uniform <- runif(n, min = 0, max = 1)
-    logratio <- ((a - 1) * log(nu_proposal) - rho. * nu_proposal / ta + nu_proposal * log(be * nu_proposal) - lgamma(nu_proposal) + nu_proposal * log(la) - la * be * nu_proposal - (A - 1) * log(nu_proposal) + B * nu_proposal) - ((a - 1) * log(nu) - rho. * sum(nu / ta) + nu * log(be * nu) - lgamma(nu) + nu * log(la) - la * be * nu - (A - 1) * log(nu) + B * nu)
+    nu_proposal <- rgamma(m, shape = A, rate = B)
+    uniform <- runif(m, min = 0, max = 1)
+    logratio <- ((a - 1) * log(nu_proposal) - rho. * nu_proposal / ta + nu_proposal * log(be * nu_proposal) - lgamma(nu_proposal) + nu_proposal * log(la) - la * be * nu_proposal - (A - 1) * log(nu_proposal) + B * nu_proposal) - ((a - 1) * log(nu) - rho. * nu / ta + nu * log(be * nu) - lgamma(nu) + nu * log(la) - la * be * nu - (A - 1) * log(nu) + B * nu)
     nu <- ifelse(test = (log(uniform) <= logratio), yes = nu_proposal, no = nu)
     Nu[iota, ] <- nu
   }
   
   # summary
-  Res <- list(La = 1/La[-(1:burn), , drop = FALSE], Be = Be[-(1:burn)], Ta = Ta[-(1:burn)], 
-              Rho. = Rho.[-(1:burn), , drop = FALSE], Nu = Nu[-(1:burn), , drop = FALSE])
+  Res <- list(La=1/La[-(1:burn), , drop=FALSE], Be=Be[-(1:burn)], Ta=Ta[-(1:burn)], 
+              Rho.=Rho.[-(1:burn), , drop=FALSE], Nu=Nu[-(1:burn), , drop=FALSE])
   return(Res)
 }
