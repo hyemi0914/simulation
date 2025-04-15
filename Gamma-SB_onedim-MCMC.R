@@ -45,7 +45,7 @@ miller <- function(x, mu, a0, b0, ep, M){
 ## OUTPUT
 # posterior samples of parameters 
 
-SB_prior <- function(y, A_y, B_y, a_ta, b_ta, a_be, b_be, a, b, de=10^(-8), ep=10^(-8), M=10, mc, burn){
+SB_prior_onedim <- function(y, A_y, B_y, a_ta, b_ta, a_be, b_be, a, b, de=10^(-8), ep=10^(-8), M=10, mc, burn){
   # preparation
   m <- length(y)
   # initial values
